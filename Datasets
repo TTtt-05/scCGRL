@@ -1,0 +1,5 @@
+The simulated datasets were generated utilizing the PROSSTT Python package.
+The empirical datasets analyzed in this study are publicly accessible from various repositories.
+Specifically, the processed human myeloid dataset was retrieved from Figshare https://doi.org/10.6084/m9.figshare.25243225.
+The mouse pancreatic dataset is available for download from the CellEnergy GitHub repository at https://github.com/lhshuang/CellEnergy/blob/main/inst/out/En_Seurat.rds.
+The human T cell depleted bone marrow dataset can be accessed from the Gene Expression Omnibus (GEO) database under the accession number GSE200046.
