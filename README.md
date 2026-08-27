@@ -144,7 +144,8 @@ python reproducibility/data/verify_raw_inputs.py
 ```
 
 See `results/README.md` for the output layout, `docs/reproduction_map.md` for
-the source-to-module map, and `docs/software_versions.md` for environments.
+the source-to-module map, `docs/software_versions.md` for environments, and
+`docs/release_validation.md` for the committed seed-42 numerical check.
 
 ## Release identity and exact commit
 
