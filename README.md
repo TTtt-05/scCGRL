@@ -159,6 +159,8 @@ than only the mutable branch name in manuscripts and response letters.
 
 ## License and citation
 
-Original scCGRL code is released under the MIT License. `CITATION.cff` records
-the software and manuscript authors. Upstream data and comparison-method
-licenses remain applicable independently; see `DATA_LICENSES.md`.
+The original scCGRL code is released under the MIT License.
+
+Citation information for scCGRL, including the software and manuscript authors, is provided in [`CITATION.cff`](CITATION.cff).
+
+Upstream datasets remain subject to their respective original licenses and usage terms; see [`DATA_LICENSES.md`](DATA_LICENSES.md) for details. Third-party software used for benchmarking remains subject to the licenses of the corresponding projects.
