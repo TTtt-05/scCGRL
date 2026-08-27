@@ -12,3 +12,8 @@
 - [x] Publication figures use dataset-specific scripts and four output formats.
 - [x] Raw input shapes, integer counts, cell IDs, gene IDs, totals, nnz, provenance, and SHA256 can be verified.
 - [x] Expression and annotation sources are documented separately.
+- [x] Original scCGRL code has an explicit license; third-party data terms are documented separately.
+- [x] H5AD and PKL artifacts are tracked through Git LFS; generated TIFF files are reproducible but excluded from Git.
+- [x] The public release has an annotated `v1.0.0` tag and an exact 40-character Git commit.
+- [x] The committed human-myeloid seed-42 run records its source commit and matches the formal repeated-run metrics at absolute tolerance `1e-12`.
+- [x] `reproducibility/verify_public_release.py` passes required-file, SHA256, H5AD-structure, portable-path, Git, and Git-LFS checks.
