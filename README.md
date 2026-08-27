@@ -81,8 +81,7 @@ controlled-access conditions.
 
 ## Main scCGRL runs
 
-Available dataset keys are `human_myeloid`, `mouse_pancreas`,
-`human_bone_marrow`, `simulation_2`, and `simulation_3`.
+Available dataset keys are `human_myeloid`, `mouse_pancreas`,`human_bone_marrow`, `simulation_2`, and `simulation_3`.
 
 ```powershell
 # One complete run
