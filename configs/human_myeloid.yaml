@@ -1,0 +1,105 @@
+title: Human myeloid
+input_candidates:
+- ${REPOSITORY_ROOT}/data/raw/human_myeloid.h5ad
+processed_input_candidates:
+- ${REPOSITORY_ROOT}/data/processed/human_myeloid.h5ad
+processed_preprocessing_profile: audited_model_ready_hvg2000_pca50_neighbors15_umap3
+processed_preprocessing_steps:
+- operation: reuse_existing_representations
+  required_obsm: [X_pca, X_umap]
+  expected_umap_dimensions: 3
+label_column: cluster
+early_label: '0'
+depth_map:
+  '0': 0
+  '1': 1
+  '2': 2
+  '3': 2
+preprocessing_profile: raw_counts_common_hvg2000_pca50_neighbors15_umap3
+preprocessing_steps:
+- operation: exclude_labels
+  values: []
+- operation: normalize_total
+  target_sum: 10000.0
+- operation: log1p
+- operation: highly_variable_genes
+  n_top_genes: 2000
+  flavor: seurat
+- operation: set_raw
+- operation: subset_highly_variable
+- operation: scale
+  max_value: 10.0
+- operation: pca
+  n_comps: 50
+  svd_solver: arpack
+  zero_center: true
+  use_highly_variable: false
+  random_state: 0
+- operation: neighbors
+  n_neighbors: 15
+  n_pcs: 30
+  use_rep: X_pca
+  method: umap
+  metric: euclidean
+  random_state: 0
+- operation: umap
+  n_components: 3
+  min_dist: 0.3
+  random_state: 0
+  preserve_existing: false
+model_coordinate_key: X_umap
+model_dimensions:
+- 0
+- 1
+- 2
+plot_coordinate_key: X_umap
+plot_dimensions:
+- 0
+- 1
+target_lineages:
+- '2'
+- '3'
+trajectory_reference_kind: annotation_guided
+annotation_topology_edges:
+- - '0'
+  - '1'
+- - '1'
+  - '2'
+- - '1'
+  - '3'
+target_genes:
+- FCGR3A
+- CD74
+target_pairs:
+- - FCGR3A
+  - '2'
+- - CD74
+  - '3'
+marker_genes:
+- CLEC5A
+- RETN
+- CCR2
+- SELL
+- CSF1R
+- ICAM2
+- C1QA
+- C1QB
+- FCGR3A
+- CCR5
+- CD2
+- CLEC10A
+- CD74
+- CD1C
+- PKIB
+explicit_colors:
+  '2': '#f9736e'
+  '3': '#95CAE9'
+heatmap_count: 2
+top_n_genes: 80
+key: human_myeloid
+_provenance:
+  source_notebook: 2026-08-17_scCGRL_five_datasets_v1.ipynb
+  notebook_date: '2026-08-17'
+  code_revision: '1.6'
+  cell_index: 19
+  cell_order: 20

@@ -1,0 +1,15 @@
+name: monocle2_2.40_legacy_20260812
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base=4.4.3
+  - bioconductor-monocle=2.40.0
+  - r-igraph=2.0.3
+  - r-ddrtree=0.1.6
+  - r-vgam=1.1_14
+  - r-jsonlite
+  - r-matrix
+# dplyr 0.8.5 is installed in the adjacent isolated library
+# environments/r_libraries/monocle2_legacy_dplyr.  It is added to .libPaths
+# only for Monocle2 because Monocle 2.40.0 still calls dplyr's underscore API.

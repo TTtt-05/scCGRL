@@ -1,0 +1,75 @@
+{
+  "seed": 42,
+  "datasets": [
+    {
+      "dataset": "human_myeloid",
+      "source_file": "data/raw/human_myeloid.h5ad",
+      "processed_file": "data/processed/human_myeloid.h5ad",
+      "preprocessing_seed": 42,
+      "n_cells": 3264,
+      "n_model_genes": 2000,
+      "raw_gene_count": 19089,
+      "cell_id_sha256": "2f71d653289d6e8c2465890a76df2ae863c59c28c67b3f4c4cc3094efd650095",
+      "gene_id_sha256": "0b81e50c02eedd2726881ad8c4ef62703499e11bf9e9fc9ffe79fc53bd204540",
+      "pca_dimensions": 50,
+      "umap_dimensions": 3,
+      "preprocessing_profile": "raw_counts_common_hvg2000_pca50_neighbors15_umap3"
+    },
+    {
+      "dataset": "mouse_pancreas",
+      "source_file": "data/raw/mouse_pancreas.h5ad",
+      "processed_file": "data/processed/mouse_pancreas.h5ad",
+      "preprocessing_seed": 42,
+      "n_cells": 2780,
+      "n_model_genes": 2000,
+      "raw_gene_count": 27998,
+      "cell_id_sha256": "1a9c9a6fa0163aa466f9b8b1c41ac5681b24d2f3afca52d27b3c0b4203b32d39",
+      "gene_id_sha256": "c4cbebcf7d407e69b9d77242f9113908e1b0c80378f91a2f662032c07ebf78ab",
+      "pca_dimensions": 50,
+      "umap_dimensions": 3,
+      "preprocessing_profile": "raw_counts_common_hvg2000_pca50_neighbors15_umap3"
+    },
+    {
+      "dataset": "human_bone_marrow",
+      "source_file": "data/raw/human_bone_marrow.h5ad",
+      "processed_file": "data/processed/human_bone_marrow.h5ad",
+      "preprocessing_seed": 42,
+      "n_cells": 7225,
+      "n_model_genes": 2000,
+      "raw_gene_count": 17226,
+      "cell_id_sha256": "30848b38ff80e766a05e78bbfd5e2b19c9534a283c4118359b3c4e2abd32efc8",
+      "gene_id_sha256": "798aa697d8ce402567a898e69a1fbc8a8fe8fdb168c203f8b6ff0b8f292af08e",
+      "pca_dimensions": 50,
+      "umap_dimensions": 3,
+      "preprocessing_profile": "raw_counts_common_hvg2000_pca50_neighbors15_umap3"
+    },
+    {
+      "dataset": "simulation_2",
+      "source_file": "data/processed/simulation_2.h5ad (packaged processed-expression input)",
+      "processed_file": "data/processed/simulation_2.h5ad",
+      "preprocessing_seed": 42,
+      "n_cells": 2000,
+      "n_model_genes": 1000,
+      "raw_gene_count": NaN,
+      "cell_id_sha256": "ca41d4e70c834e2139fe78fe0061f99b6a9a0f157eacd2601c90ee5dbf41cbac",
+      "gene_id_sha256": "cdcaf63295eb44b199f8945bea9040fc067d26c0af90e23fefc77367534bc75e",
+      "pca_dimensions": 50,
+      "umap_dimensions": 3,
+      "preprocessing_profile": "simulation_pca50_neighbors30_umap3"
+    },
+    {
+      "dataset": "simulation_3",
+      "source_file": "data/processed/simulation_3.h5ad (packaged processed-expression input)",
+      "processed_file": "data/processed/simulation_3.h5ad",
+      "preprocessing_seed": 42,
+      "n_cells": 3000,
+      "n_model_genes": 1000,
+      "raw_gene_count": NaN,
+      "cell_id_sha256": "a7823306255ffc92b4958a7eaabccfb72108ce0de250e306eceb00431c4258ec",
+      "gene_id_sha256": "cdcaf63295eb44b199f8945bea9040fc067d26c0af90e23fefc77367534bc75e",
+      "pca_dimensions": 50,
+      "umap_dimensions": 3,
+      "preprocessing_profile": "simulation_3_pca50_neighbors30_umap3"
+    }
+  ]
+}

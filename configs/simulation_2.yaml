@@ -1,0 +1,68 @@
+title: Two-branch simulated trajectory
+input_candidates:
+- ${REPOSITORY_ROOT}/data/processed/simulation_2.h5ad
+label_column: branch
+early_label: Start
+reference_pseudotime_column: pseudotime
+preprocessing_profile: simulation_pca50_neighbors30_umap3
+preprocessing_steps:
+- operation: log1p_if_max_gt
+  threshold: 100
+- operation: pca
+  n_comps: 50
+  svd_solver: arpack
+  use_highly_variable: false
+  zero_center: true
+  random_state: 0
+- operation: neighbors
+  n_neighbors: 30
+  n_pcs: 30
+  method: umap
+  metric: euclidean
+  random_state: 0
+- operation: umap
+  n_components: 3
+  a: 0.5830300204883174
+  b: 1.3341669924555197
+  random_state: 0
+  preserve_existing: false
+reference_branch_column: branch
+trajectory_reference_kind: simulated_tree
+reference_milestone_edges:
+- - __root__
+  - Start
+- - Start
+  - Left_Mid
+- - Left_Mid
+  - Left_End
+- - Start
+  - Right_Mid
+- - Right_Mid
+  - Right_End
+cor_dist_waypoints: 120
+trajectory_metric_rf_trees: 64
+model_coordinate_key: X_umap
+model_dimensions:
+- 0
+- 1
+- 2
+plot_coordinate_key: X_umap
+plot_dimensions:
+- 0
+- 1
+target_lineages:
+- Left_End
+- Right_End
+target_genes: []
+target_pairs: []
+marker_genes: []
+explicit_colors: {}
+heatmap_count: 2
+top_n_genes: 80
+key: simulation_2
+_provenance:
+  source_notebook: 2026-08-17_scCGRL_five_datasets_v1.ipynb
+  notebook_date: '2026-08-17'
+  code_revision: '1.6'
+  cell_index: 19
+  cell_order: 20

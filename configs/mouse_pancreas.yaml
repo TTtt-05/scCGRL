@@ -1,0 +1,116 @@
+title: Mouse pancreatic endocrinogenesis
+input_candidates:
+- ${REPOSITORY_ROOT}/data/raw/mouse_pancreas.h5ad
+processed_input_candidates:
+- ${REPOSITORY_ROOT}/data/processed/mouse_pancreas.h5ad
+processed_preprocessing_profile: audited_model_ready_hvg2000_pca50_neighbors15_umap3
+processed_preprocessing_steps:
+- operation: reuse_existing_representations
+  required_obsm: [X_pca, X_umap]
+  expected_umap_dimensions: 3
+label_column: clusters_fig6_broad_final
+early_label: Ngn3 low EP
+depth_map:
+  Ngn3 low EP: 0
+  Ngn3 high EP: 1
+  Fev+: 2
+  Alpha: 3
+  Beta: 3
+  Delta: 3
+  Epsilon: 3
+preprocessing_profile: raw_counts_common_hvg2000_pca50_neighbors15_umap3
+preprocessing_steps:
+- operation: exclude_labels
+  values: []
+- operation: normalize_total
+  target_sum: 10000.0
+- operation: log1p
+- operation: highly_variable_genes
+  n_top_genes: 2000
+  flavor: seurat
+- operation: set_raw
+- operation: subset_highly_variable
+- operation: scale
+  max_value: 10.0
+- operation: pca
+  n_comps: 50
+  svd_solver: arpack
+  zero_center: true
+  use_highly_variable: false
+  random_state: 0
+- operation: neighbors
+  n_neighbors: 15
+  n_pcs: 30
+  use_rep: X_pca
+  method: umap
+  metric: euclidean
+  random_state: 0
+- operation: umap
+  n_components: 3
+  min_dist: 0.3
+  random_state: 0
+  preserve_existing: false
+model_coordinate_key: X_umap
+model_dimensions:
+- 0
+- 1
+- 2
+plot_coordinate_key: X_umap
+plot_dimensions:
+- 0
+- 1
+target_lineages:
+- Alpha
+- Beta
+- Delta
+- Epsilon
+trajectory_reference_kind: annotation_guided
+annotation_topology_edges:
+- - Ngn3 low EP
+  - Ngn3 high EP
+- - Ngn3 high EP
+  - Fev+
+- - Fev+
+  - Alpha
+- - Fev+
+  - Beta
+- - Fev+
+  - Delta
+- - Fev+
+  - Epsilon
+target_genes:
+- Ins1
+- Gcg
+- Sst
+- Ghrl
+target_pairs:
+- - Ins1
+  - Beta
+- - Gcg
+  - Alpha
+- - Sst
+  - Delta
+- - Ghrl
+  - Epsilon
+marker_genes:
+- Neurog3
+- Pdx1
+- Nkx6-1
+- Ins1
+- Ins2
+- Gcg
+- Sst
+- Ghrl
+- Pyy
+- Cck
+- Iapp
+explicit_colors: {}
+heatmap_count: 4
+top_n_genes: 80
+key: mouse_pancreas
+_provenance:
+  source_notebook: 2026-08-17_scCGRL_five_datasets_v1.ipynb
+  notebook_date: '2026-08-17'
+  code_revision: '1.6'
+  cell_index: 19
+  cell_order: 20

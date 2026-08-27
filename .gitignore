@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Newly generated runs. Packaged reference outputs under results/ are retained.
+results/main_runs/
+results/main_runs_processed/
+results/benchmark/
+results/tables/
+
+# Reproducible high-volume exports. The scripts remain tracked and regenerate
+# these files; PNG/SVG/EPS publication previews may remain in the repository.
+results/figures/*.tiff
+
+# Temporary R/Python bridge directories and logs.
+benchmark/**/input/
+benchmark/**/output.csv
+*.log
+*.tmp

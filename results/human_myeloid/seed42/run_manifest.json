@@ -1,0 +1,19 @@
+{
+  "repository_version": "1.6",
+  "repository_commit": "not_available",
+  "canonical_source_notebook": "2026-08-17_scCGRL_five_datasets_v1.ipynb",
+  "source_notebook_date": "2026-08-17",
+  "dataset": "human_myeloid",
+  "input_file": "data/raw/human_myeloid.h5ad",
+  "input_stage": "raw",
+  "config_file": "configs/human_myeloid.yaml",
+  "preprocessing_profile": "raw_counts_common_hvg2000_pca50_neighbors15_umap3",
+  "seed": 42,
+  "episodes": 10000,
+  "runs": 1,
+  "evaluation_metric_version": "v2.0",
+  "provenance_conflicts": {
+    "human_bone_marrow_notebook_display_seed": null,
+    "selected_cli_seed": 42
+  }
+}

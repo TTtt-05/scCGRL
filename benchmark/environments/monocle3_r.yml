@@ -1,0 +1,13 @@
+name: monocle3_1.4.27_official_20260812
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base=4.6.1
+  - r-remotes
+  - r-jsonlite
+  - r-matrix
+  - bioconductor-singlecellexperiment
+# monocle3 1.4.27 is installed from the official cole-trapnell-lab/monocle3
+# source in environments/r_libraries/monocle3. Its dependencies are read from
+# the established R 4.6 benchmark library.
