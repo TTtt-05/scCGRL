@@ -23,7 +23,7 @@ Python/Palantir 1.4.3. PCA, diffusion maps and multiscale space are followed by
 
 ## Slingshot
 
-R/Slingshot 2.20.0. Library-size/log normalization, variable genes, PCA,
+R 4.6.1/Slingshot 2.20.0. Library-size/log normalization, variable genes, PCA,
 unsupervised mclust, then Slingshot. The root-containing cluster is
 `start.clus`; no end cluster is supplied.
 
@@ -46,22 +46,24 @@ root cell is supplied; no terminal prior is used.
 
 ## SCORPIUS
 
-R/SCORPIUS 1.0.10. Native dimensionality reduction and trajectory inference
+R 4.6.1/SCORPIUS 1.0.10. Native dimensionality reduction and trajectory inference
 are root-free; the shared root only orients pseudotime after inference.
 
 ## TSCAN
 
-R/TSCAN 1.50.0. Sparse-equivalent normalization/filtering, model clustering,
+R 4.6.1/TSCAN 1.50.0. Sparse-equivalent normalization/filtering, model clustering,
 cluster MST, cell mapping and ordering are used. The runner records its CV=0.5
 fallback, `clusternum=2-9` search and non-finite-fit recovery explicitly.
 
 ## SLICER
 
-R/SLICER 0.2.0. Native gene selection, `select_k`, LLE, KNN graph, cell order
+R 4.6.1/SLICER 0.2.0. Native gene selection, `select_k`, LLE, KNN graph, cell order
 and branch assignment are used. The shared start cell is supplied and no
 terminal prior is provided. Timeouts/errors are recorded rather than replaced
 with fabricated pseudotime or structure metrics.
 
-Environment definitions are under `benchmark/environments`. Every new run must
-record the actual input, software versions, parameters, root-use mode, runtime,
-memory, status and error message.
+Environment definitions are under `benchmark/environments`. The modern R
+installer pins the audited upstream source revisions for Slingshot, TSCAN,
+SLICER, and SCORPIUS; Monocle 1/2/3 remain isolated because their dependencies
+are mutually incompatible. Every new run records the actual input, software
+versions, parameters, root-use mode, runtime, memory, status, and error message.

@@ -1,132 +1,117 @@
-# scCGRL release 27
+# scCGRL
 
-This directory is the portable scCGRL code and data package. Runtime paths are
-repository-relative or supplied explicitly on the command line. The packaged
-scope is the core scCGRL model, its five configured datasets, the ten-method
-benchmark, repeated main-model runs, publication-figure programs, table
-summaries, and data-reproducibility utilities.
+This repository contains the public reproducibility resources for scCGRL:
 
-## Quick start
+- verified raw-count inputs for the three empirical datasets;
+- model-ready processed inputs for all five datasets;
+- the scCGRL model implementation and command-line runner;
+- ten comparison-method runners and reproducible software environments;
+- dataset-specific figure-generating scripts;
+- software-version, data-provenance, licensing, and verification records.
 
-From the repository root:
+Generated results are intentionally not committed. Every command writes new
+outputs under `results/`, which is excluded from Git.
+
+## Repository contents
+
+| Path | Contents |
+|---|---|
+| `configs/` | Audited YAML configuration for each dataset. |
+| `data/raw/` | Integer raw-count H5AD files for the three empirical datasets. |
+| `data/processed/` | Five model-ready H5AD inputs containing labels, PCA50, KNN matrices, and UMAP3. |
+| `src/sccgrl/` | Preprocessing, endpoint discovery, Q-learning, trajectory inference, pseudotime mapping, RF propagation, metrics, and I/O. |
+| `run_sccgrl.py` | Main scCGRL command-line entry point. |
+| `benchmark/` | PAGA, DPT, Palantir, Slingshot, Monocle 1/2/3, SLICER, TSCAN, and SCORPIUS runners, shared evaluation, and environments. |
+| `figures/` | Dataset-specific publication-figure scripts. |
+| `reproducibility/data/` | Data preparation, exact verification, provenance, and checksums. |
+| `docs/` | Dataset, benchmark, software-version, and reproduction documentation. |
+
+## Installation
+
+Git LFS is required because the H5AD inputs are stored as LFS objects.
 
 ```powershell
+git lfs install
+git clone https://github.com/TTtt-05/scCGRL.git
+Set-Location scCGRL
+git lfs pull
+
 conda env create -f environment.yml
 conda activate sccgrl_20260827
+```
 
-# Recompute the complete human-myeloid workflow from integer raw counts.
+The main environment pins the versions used for release verification. The
+comparison methods use the isolated environments in `benchmark/environments/`.
+
+## Data
+
+| Dataset | Raw input | Processed input | Processed shape | Label column |
+|---|---|---|---:|---|
+| `human_myeloid` | yes | yes | 3,264 x 2,000 | `cluster` |
+| `mouse_pancreas` | yes | yes | 2,780 x 2,000 | `clusters_fig6_broad_final` |
+| `human_bone_marrow` | yes | yes | 7,225 x 2,000 | `celltype` |
+| `simulation_2` | no raw-count artifact | yes | 2,000 x 1,000 | `branch` |
+| `simulation_3` | no raw-count artifact | yes | 3,000 x 1,000 | `branch` |
+
+The bone-marrow processed input excludes ETP (60 cells) and BcellPre (154
+cells) during configured preprocessing; the bundled raw input retains all
+7,439 cells. The two simulation files are processed floating-point expression
+inputs generated with PROSSTT and include simulation truth.
+
+For empirical data, the common preprocessing is dataset-specific exclusion,
+`normalize_total(target_sum=10000)`, natural `log1p`, 2,000 Seurat HVGs,
+`set_raw`, HVG subsetting, scaling capped at 10, PCA50, neighbors15 using PC30,
+and UMAP3 (`min_dist=0.3`, seed 0). Exact sources, selection rules, annotation
+provenance, transformations, and redistribution boundaries are documented in
+`DATA_LICENSES.md`, `docs/data_availability.md`, and
+`reproducibility/data/`.
+
+## Run scCGRL
+
+Run a complete seed-42 analysis from packaged raw counts:
+
+```powershell
 python run_sccgrl.py --dataset human_myeloid --input-stage raw --seed 42 --episodes 10000
+```
 
-# Reuse the packaged, model-ready PCA/neighbors/UMAP cache.
+Reuse the verified model-ready processed input:
+
+```powershell
 python run_sccgrl.py --dataset human_myeloid --input-stage processed --seed 42 --episodes 10000
 ```
 
-Both commands write the run to `results/human_myeloid/seed42/`. They save
-the per-cell pseudotime, metrics, resource measurements, processed AnnData,
-model state, audit manifest, and diagnostic figures.
+Both commands write to `results/human_myeloid/seed42/` and record pseudotime,
+metrics, resource measurements, processed AnnData, model state, figures, run
+parameters, software versions, and the Git commit.
 
-## Repository map
+## Run the ten comparison methods
 
-| Path | Main contents | What it is used for |
-|---|---|---|
-| `configs/` | One audited YAML file per dataset | Defines labels, early state, preprocessing, UMAP dimensions, endpoint settings, biological references, and plotting dimensions. |
-| `data/raw/` | Three real-data H5AD files with integer counts | Recomputes the complete common preprocessing pipeline from source counts. |
-| `data/processed/` | Five dataset-named H5AD files plus checksums and manifests | Reuses or audits the unified processed inputs, labels, PCA, neighbors, and three-dimensional UMAP representations. |
-| `src/sccgrl/` | Preprocessing, graph/endpoints, Q-learning, trajectory construction, graph pseudotime, RF propagation, metrics, and I/O modules | Implements the main scCGRL algorithm. |
-| `run_sccgrl.py` | Main command-line entry point | Runs one or more seeds on one configured dataset from raw or processed input. |
-| `benchmark/` | PAGA, DPT, Palantir, Slingshot, Monocle 1/2/3, SLICER, TSCAN, and SCORPIUS runners | Runs the ten comparison methods and applies the shared evaluation adapter. |
-| `experiments/repeat_50_runs/` | The audited seeds 42--91 repetition driver | Reproduces the 50-run stability/resource experiment for the main method. |
-| `figures/` | Dataset-specific publication-figure scripts | Produces the biologically distinct figures for each dataset without forcing one common layout. |
-| `tables/` | Benchmark, repeated-run, and runtime/memory summaries | Converts per-run CSV files into manuscript-ready statistical tables. |
-| `reproducibility/data/` | Raw-data preparation, exact verification, checksums, and bilingual provenance | Reconstructs and verifies the three real raw inputs without changing counts. |
-| `reproducibility/validate_seed42_run.py` | Complete seed-42 validation | Compares a portable main-model run with the recorded reference output. |
-| `results/repeat_50_runs/` | Existing five-dataset 50-run metric CSVs | Supplies the recorded scCGRL results imported by the benchmark. |
-| `results/<dataset>/seed<seed>/` | Complete single-run output | Stores metrics, pseudotime, model state, processed AnnData, audit manifest, and diagnostic figures for one dataset and seed. |
-| `results/figures/` | Three real-data publication figures | Preserves each large figure in PNG, TIFF, EPS, and editable SVG formats. |
-| `docs/` | Data, benchmark, software, and reproduction documentation | Explains provenance, implementation choices, output locations, and software versions. |
-
-## Data availability and input contents
-
-The data files in this release are verified, repository-relative artifacts.
-Checksums are stored in `data/checksums.sha256` and
-`data/processed/processed_inputs_checksums.sha256`; source URLs, annotation
-provenance, selection rules, and redistribution boundaries are recorded in
-`DATA_LICENSES.md` and `docs/data_availability.md`.
-
-The three real-data files in `data/raw` contain integer raw counts:
-
-| Dataset | Raw shape | Required label | Runtime selection |
-|---|---:|---|---|
-| `human_myeloid` | 3,264 x 19,089 | `cluster` | none |
-| `mouse_pancreas` | 2,780 x 27,998 | `clusters_fig6_broad_final` | E15.5 endocrine subset already fixed by the source-selection rule |
-| `human_bone_marrow` | 7,439 x 17,226 | `celltype` | exclude ETP (60) and BcellPre (154), leaving 7,225 cells |
-
-The corresponding real-data caches in `data/processed` contain 2,000 HVGs,
-the required labels and metadata, 50-dimensional `X_pca`, 3-dimensional
-`X_umap`, and the Scanpy neighbor matrices. The common real-data preprocessing
-is: dataset-specific exclusion; `normalize_total(target_sum=10000)`; natural
-`log1p`; 2,000 Seurat HVGs; `set_raw`; HVG subsetting; scale capped at 10;
-PCA50; neighbors15 using PC30; and UMAP3 with `min_dist=0.3` and seed 0.
-
-`simulation_2.h5ad` and `simulation_3.h5ad` are processed floating-point
-expression inputs rather than raw-count files. They include simulated branch
-labels, reference pseudotime, PCA50, neighbor matrices, and UMAP3. Their YAML
-configurations deterministically regenerate PCA50, neighbors30/PC30, and UMAP3
-before a raw-stage main-model run, so historical AnnData fields are not used to
-tune the final graph.
-
-Expression-count provenance and annotation provenance are reported separately
-in `docs/data_availability.md`, `docs/datasets.md`, and
-`reproducibility/data/datasets_cn.md`. Packaging these files does not replace or
-broaden upstream licenses, terms of use, attribution requirements, or
-controlled-access conditions.
-
-## Main scCGRL runs
-
-Available dataset keys are `human_myeloid`, `mouse_pancreas`,
-`human_bone_marrow`, `simulation_2`, and `simulation_3`.
+Create the Python baseline environment:
 
 ```powershell
-# One complete run
-python run_sccgrl.py --dataset mouse_pancreas --seed 42 --episodes 10000
-
-# Ten paired seeds beginning at 42
-python run_sccgrl.py --dataset simulation_2 --seed 42 --runs 10 --episodes 10000
-
-# Formal 50-run protocol, seeds 42--91
-python experiments/repeat_50_runs/run_repeat_50.py --dataset human_myeloid
+conda env create -f benchmark/environments/benchmark_python.yml
 ```
 
-## Ten-method benchmark
-
-Python baselines are PAGA, DPT, and Palantir. R baselines are Slingshot,
-Monocle 1/2/3, SLICER, TSCAN, and SCORPIUS. Each method retains its audited
-official/recommended internal workflow. The same cell basis, root-information
-policy, pseudotime normalization, evaluation adapter, and resource recorder are
-used across methods. No terminal identity, terminal count, true branch count,
-or reference pseudotime is supplied to inference.
-
-Install `benchmark/environments/benchmark_python.yml` and the isolated R
-environments described under `benchmark/environments/`. External R locations
-are configured with the environment variables documented in
-`docs/benchmark_methods.md`.
+Create each required R environment as described by the YAML files and
+`benchmark/environments/README.md`. The benchmark uses the same-seed scCGRL
+root without rerunning the main model internally, so first generate the
+matching local scCGRL rows (or point `SCCGRL_REPEAT_RESULTS` to existing formal
+rows), then run the baselines:
 
 ```powershell
-python -m benchmark.run_benchmark --datasets human_myeloid --runs 10 --seed 42 --resume
+python run_sccgrl.py --dataset human_myeloid --input-stage processed --seed 42 --runs 10 --episodes 10000
+python -m benchmark.run_benchmark --datasets human_myeloid --runs 10 --seed 42 --skip-sccgrl-import --resume
 ```
 
-Method-level outputs are written to
-`results/benchmark/<method>/<dataset>/`. Combined outputs are written to
-`results/benchmark/combined/benchmark_all_runs.csv`,
-`benchmark_summary.csv`, and `benchmark_completion.csv`. Existing scCGRL
-50-run rows are imported from `results/repeat_50_runs`; scCGRL is not rerun by
-the benchmark driver.
+The benchmark does not supply terminal identity, terminal count, true branch
+count, or reference pseudotime to inference. Unsupported branch/topology
+metrics remain `NaN`; failures are recorded and do not terminate later runs.
+Outputs are generated under `results/benchmark/`.
 
-## Publication figures
+## Generate publication figures
 
-The three real datasets use separate figure programs because their lineage
-ordering, marker panels, and heatmap layouts differ biologically. Each program
-exports PNG (300 dpi), TIFF (600 dpi), EPS, and editable-text SVG.
+The three empirical datasets deliberately use separate layouts and marker
+panels. Each script exports PNG, TIFF, EPS, and editable SVG.
 
 ```powershell
 python figures/human_myeloid/make_figures_human_myeloid.py --seed 42
@@ -134,34 +119,23 @@ python figures/mouse_pancreas/make_figures_mouse_pancreas.py --seed 42
 python figures/human_bone_marrow/make_figures_human_bone_marrow.py --seed 42
 ```
 
-## Summaries and verification
+Simulation-specific figure runners are under `figures/simulation_2/` and
+`figures/simulation_3/`. Generated files are written to `results/figures/`.
+
+## Verify the public package
 
 ```powershell
-python tables/repeat_50_runs_summary.py results/repeat_50_runs results/tables/repeat_50_runs_summary.csv
-python tables/benchmark_summary.py
-python tables/runtime_memory_summary.py results/benchmark/combined/benchmark_all_runs.csv results/tables/runtime_memory_summary.csv
 python reproducibility/data/verify_raw_inputs.py
-```
-
-See `results/README.md` for the output layout, `docs/reproduction_map.md` for
-the source-to-module map, `docs/software_versions.md` for environments, and
-`docs/release_validation.md` for the committed seed-42 numerical check.
-
-## Release identity and exact commit
-
-Every run manifest records the Git commit returned by `git rev-parse HEAD`.
-Before citing or archiving a run, verify the checkout and data package with:
-
-```powershell
-git rev-parse HEAD
 python reproducibility/verify_public_release.py
+git rev-parse HEAD
 ```
 
-The publication release is tagged `v1.0.0`. Use the full commit hash rather
-than only the mutable branch name in manuscripts and response letters.
+The publication release is identified by the immutable Git tag `v1.0.0` and
+its exact 40-character commit hash. Cite that hash rather than only the mutable
+`main` branch. See `CITATION.cff` for software citation metadata.
 
-## License and citation
+## License
 
-Original scCGRL code is released under the MIT License. `CITATION.cff` records
-the software and manuscript authors. Upstream data and comparison-method
-licenses remain applicable independently; see `DATA_LICENSES.md`.
+Original scCGRL code is released under the MIT License. Third-party datasets
+and comparison methods retain their own licenses and attribution requirements;
+see `DATA_LICENSES.md` and the upstream sources before redistribution.

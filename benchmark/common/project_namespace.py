@@ -1,8 +1,4 @@
-"""Compatibility namespace used by migrated notebook experiments.
-
-This module replaces Notebook cell execution with imports from the audited
-repository modules.  It does not alter experiment formulas or parameters.
-"""
+"""Load the audited scCGRL modules for shared benchmark evaluation."""
 
 from __future__ import annotations
 
@@ -11,12 +7,11 @@ from pathlib import Path
 import sys
 
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_ROOT = REPOSITORY_ROOT / "src"
-if str(REPOSITORY_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPOSITORY_ROOT))
-if str(SOURCE_ROOT) not in sys.path:
-    sys.path.insert(0, str(SOURCE_ROOT))
+for path in (REPOSITORY_ROOT, SOURCE_ROOT):
+    if str(path) not in sys.path:
+        sys.path.insert(0, str(path))
 
 import sccgrl.graph_endpoints as graph_endpoints
 import sccgrl.metrics as metrics
@@ -36,6 +31,7 @@ def dataset_configs(project_root=None):
 
 
 def build_namespace(project_root=None):
+    """Expose the final model/evaluation functions without executing notebooks."""
     namespace = {"DATASET_CONFIGS": dataset_configs(project_root)}
     for module in (
         graph_endpoints,
@@ -70,5 +66,5 @@ def build_namespace(project_root=None):
     )
     missing = [name for name in required if name not in namespace]
     if missing:
-        raise RuntimeError(f"Migrated namespace missing: {missing}")
+        raise RuntimeError(f"Benchmark namespace missing: {missing}")
     return namespace

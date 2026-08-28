@@ -8,7 +8,7 @@ import pandas as pd
 import scipy.sparse as sp
 
 from .._config import PROJECT_ROOT, SCCGRL_RESULTS_ROOT, SEEDS
-from experiments.common import build_namespace
+from .project_namespace import build_namespace
 import scanpy as sc
 
 
@@ -111,18 +111,45 @@ def build_baseline_input(namespace, input_path, config, evaluation):
     }
 
 
+def _main_result_candidates(dataset_key, seed):
+    """Return supported local scCGRL metric files in deterministic order."""
+    seed = int(seed)
+    candidates = [
+        SCCGRL_RESULTS_ROOT / f"{dataset_key}_repeat_50" / f"{dataset_key}_50_runs.csv",
+        SCCGRL_RESULTS_ROOT / dataset_key / f"{dataset_key}_50_runs.csv",
+    ]
+    local_root = PROJECT_ROOT / "results" / dataset_key
+    candidates.extend(sorted(local_root.glob(f"seeds*-*/{dataset_key}_repeated_*_runs.csv")))
+    candidates.extend(sorted(local_root.glob(f"seed{seed}/{dataset_key}_single_run_metrics.csv")))
+    return list(dict.fromkeys(path.resolve() for path in candidates if path.is_file()))
+
+
+def _read_seed_result(dataset_key, seed):
+    matches = []
+    for path in _main_result_candidates(dataset_key, seed):
+        frame = read_existing_csv(path)
+        seed_column = "random_seed" if "random_seed" in frame else "seed"
+        if seed_column not in frame:
+            continue
+        selected = frame[pd.to_numeric(frame[seed_column], errors="coerce") == int(seed)]
+        if len(selected) == 1:
+            matches.append((path, selected.iloc[0]))
+    if not matches:
+        raise RuntimeError(
+            f"No unique seed-{seed} scCGRL result was found for {dataset_key}. "
+            "Run scCGRL for the same seeds before the baseline benchmark, or "
+            "set SCCGRL_REPEAT_RESULTS to an existing formal result directory."
+        )
+    return matches[0]
+
+
 def build_root_anchor(namespace, dataset_key, config, input_path, seed, context=None):
     # Read the same-seed root from the existing scCGRL result.  Do not rerun
     # scCGRL preprocessing, endpoint discovery, Q-learning, or pseudotime.
-    metrics_path = (
-        SCCGRL_RESULTS_ROOT / f"{dataset_key}_repeat_50" / f"{dataset_key}_50_runs.csv"
-    )
-    existing = read_existing_csv(metrics_path)
-    seed_column = "random_seed" if "random_seed" in existing else "seed"
-    existing = existing[pd.to_numeric(existing[seed_column], errors="coerce") == int(seed)]
-    if len(existing) != 1 or "start_cell" not in existing:
-        raise RuntimeError(f"Cannot read the unique seed-{seed} scCGRL root from {metrics_path}")
-    start_index = int(existing.iloc[0]["start_cell"])
+    metrics_path, existing = _read_seed_result(dataset_key, seed)
+    if "start_cell" not in existing:
+        raise RuntimeError(f"Seed-{seed} scCGRL result has no start_cell: {metrics_path}")
+    start_index = int(existing["start_cell"])
     if context is None:
         context = evaluation_context(namespace, input_path, config, int(seed))
     if not 0 <= start_index < context["adata"].n_obs:
@@ -130,13 +157,13 @@ def build_root_anchor(namespace, dataset_key, config, input_path, seed, context=
     return {
         "start_cell_id": str(context["adata"].obs_names[start_index]),
         "scCGRL_start_index": start_index,
-        "K": int(existing.iloc[0]["K"]),
+        "K": int(existing["K"]),
         "source": str(metrics_path),
     }
 
 
 def import_sccgrl_rows(dataset_key, runs=10):
-    path = SCCGRL_RESULTS_ROOT / f"{dataset_key}_repeat_50" / f"{dataset_key}_50_runs.csv"
+    path, _ = _read_seed_result(dataset_key, SEEDS[0])
     frame = read_existing_csv(path)
     seed_column = "random_seed" if "random_seed" in frame else "seed"
     frame = frame[pd.to_numeric(frame[seed_column], errors="coerce").isin(SEEDS[:runs])].copy()

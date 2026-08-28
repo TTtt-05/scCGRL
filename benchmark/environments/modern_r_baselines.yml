@@ -1,0 +1,20 @@
+name: sccgrl_modern_r_baselines_20260828
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base=4.6.1
+  - r-remotes
+  - r-biocmanager
+  - r-jsonlite
+  - r-matrix
+  - r-mclust
+  - r-igraph
+  - r-lle
+  - r-alphahull
+  - bioconductor-singlecellexperiment
+  - bioconductor-summarizedexperiment
+  - bioconductor-trajectoryutils
+
+# After environment creation, run:
+# Rscript benchmark/environments/install_modern_r_baselines.R

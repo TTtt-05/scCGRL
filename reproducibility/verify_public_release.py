@@ -28,7 +28,9 @@ REQUIRED_FILES = [
     "run_sccgrl.py",
     "src/sccgrl/trajectory.py",
     "benchmark/run_benchmark.py",
+    "benchmark/summary.py",
     "benchmark/common/evaluation.py",
+    "benchmark/common/project_namespace.py",
     "figures/human_myeloid/make_figures_human_myeloid.py",
     "figures/mouse_pancreas/make_figures_mouse_pancreas.py",
     "figures/human_bone_marrow/make_figures_human_bone_marrow.py",
@@ -51,6 +53,18 @@ BASELINE_FILES = [
     "benchmark/tscan.R",
     "benchmark/slicer.R",
 ]
+
+ENVIRONMENT_FILES = [
+    "benchmark/environments/benchmark_python.yml",
+    "benchmark/environments/modern_r_baselines.yml",
+    "benchmark/environments/install_modern_r_baselines.R",
+    "benchmark/environments/monocle1_r.yml",
+    "benchmark/environments/monocle2_r.yml",
+    "benchmark/environments/monocle3_r.yml",
+    "benchmark/environments/README.md",
+]
+
+FORBIDDEN_COMMITTED_DIRECTORIES = ["experiments", "tables", "results"]
 
 EXPECTED_PROCESSED = {
     "human_myeloid.h5ad": ((3264, 2000), "cluster"),
@@ -93,8 +107,17 @@ def main() -> int:
     def record(name: str, passed: bool, detail: str) -> None:
         checks.append({"check": name, "passed": bool(passed), "detail": detail})
 
-    missing = [name for name in REQUIRED_FILES + BASELINE_FILES if not (ROOT / name).is_file()]
+    missing = [
+        name
+        for name in REQUIRED_FILES + BASELINE_FILES + ENVIRONMENT_FILES
+        if not (ROOT / name).is_file()
+    ]
     record("required_reproducibility_files", not missing, "missing=" + repr(missing))
+
+    forbidden = [
+        name for name in FORBIDDEN_COMMITTED_DIRECTORIES if (ROOT / name).exists()
+    ]
+    record("focused_repository_scope", not forbidden, "present=" + repr(forbidden))
 
     checksum_specs = [
         (ROOT / "data/checksums.sha256", ROOT / "data"),
@@ -144,7 +167,9 @@ def main() -> int:
         paths = [item] if item.is_file() else list(item.rglob("*.md"))
         for path in paths:
             content = path.read_text(encoding="utf-8", errors="replace")
-            if re.search(r"(?i)[A-Z]:[\\/]", content):
+            # Match a Windows drive path but not the trailing ``s:/`` in an
+            # HTTPS URL.
+            if re.search(r"(?i)(?<![A-Z])[A-Z]:[\\/]", content):
                 absolute_hits.append(str(path.relative_to(ROOT)))
     record("portable_documentation_paths", not absolute_hits, repr(absolute_hits))
 

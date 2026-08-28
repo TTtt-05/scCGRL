@@ -32,7 +32,7 @@ from benchmark.common.preprocessing import (
     load_project_namespace, resolve_dataset,
 )
 from benchmark.common.resource_monitor import ProcessTreeRSSMonitor
-from tables.benchmark_summary import summarize
+from benchmark.summary import summarize
 
 
 _EVALUATION_CONTEXT_CACHE = {}

@@ -1,20 +1,13 @@
 # Changelog
 
-## Release 27 - 2026-08-27
+## v1.0.0 - 2026-08-28
 
-- Created a focused portable package containing the core scCGRL model, five
-  dataset configurations, verified inputs, ten baseline methods, repeated main
-  runs, publication figures, tables, and reproducibility utilities.
-- Packaged the verified raw and processed data without changing matrices or
-  checksums, and documented each source-specific redistribution boundary.
-- Documented the bundled raw counts, processed labels, PCA50, neighbor graphs,
-  UMAP3, and the human-bone-marrow ETP/BcellPre exclusion.
-- Removed non-core experimental modules and their generated outputs from this
-  release scope.
-- Removed the dedicated quick-test program and its generated output.
-- Updated the README, data-availability statement, result map, and
-  reproducibility map to describe only files present in release 27.
-- Pinned the main environment to the versions used by the successful seed-42
-  validation run and added an upload-gate verification program.
-- Added complete software/manuscript citation metadata and an MIT license for
-  original scCGRL code; third-party data retain their own terms.
+- Published a focused scCGRL reproducibility package containing verified data,
+  model-ready processed inputs, the main method and runner, ten comparison
+  methods, isolated environments, figure scripts, and provenance documentation.
+- Excluded generated results, repeated-run experiments, ablations, robustness,
+  parameter-sensitivity, and temporary validation outputs from the public scope.
+- Pinned the main Python environment and the audited comparison-method package
+  versions; added exact upstream revisions for modern R baselines.
+- Added checksums, Git LFS configuration, package verification, code citation,
+  source-specific data licensing notes, and an immutable release tag.
