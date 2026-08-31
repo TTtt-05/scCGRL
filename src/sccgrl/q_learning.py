@@ -13,7 +13,7 @@ plt.rcParams['axes.unicode_minus'] = False
 
 class QLearningPathFinder:
     def __init__(self, adj_matrix, coords, start_idx, end_indices,
-                 cell_types=None, epsilon=0.5, alpha=0.1, gamma=0.9,
+                 epsilon=0.5, alpha=0.1, gamma=0.9,
                  n_episodes=1000, converge_threshold=1e-5,
                  k=15, weight_epsilon=1e-5):
         """
@@ -24,8 +24,6 @@ class QLearningPathFinder:
         self.n_cells = adj_matrix.shape[0]
         self.start = start_idx
         self.ends = set(end_indices)
-        self.cell_types = cell_types
-
         self.epsilon = epsilon
         self.alpha = alpha
         self.gamma = gamma
@@ -53,8 +51,7 @@ class QLearningPathFinder:
         self.endpoint_reward_history = {end: [] for end in self.ends}
 
     def _get_end_name(self, idx):
-        if self.cell_types is not None:
-            return f"{idx} ({self.cell_types[idx]})"
+        """Return an endpoint identifier without consulting cell-type labels."""
         return str(idx)
 
     def _precompute_end_distances(self):

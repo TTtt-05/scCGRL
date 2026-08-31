@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased - 2026-08-31
+
+- Added the curated Supplementary Table S11 benchmark workbook and documented
+  its repository location.
+
 ## v1.0.0 - 2026-08-28
 
 - Published a focused scCGRL reproducibility package containing verified data,

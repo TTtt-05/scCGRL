@@ -16,7 +16,6 @@ from .q_learning import QLearningPathFinder
 from .pseudotime_mapping import (
     compute_branch_pseudotimes,
     compute_graph_distance_global_pseudotime,
-    compute_enhanced_rf_pseudotime_with_global,
 )
 from .rf_mapping import compute_rf_pseudotime_with_validation
 from .metrics import (
@@ -42,7 +41,7 @@ import pandas as pd
 
 
 
-CODE_REVISION = "1.6"
+CODE_REVISION = "1.7"
 
 
 def software_versions():
@@ -80,14 +79,13 @@ def train_one_q_learning(context, episodes=10000, seed=42, verbose=True):
         alpha=0.1,
         gamma=0.9,
         n_episodes=int(episodes),
-        cell_types=context["labels"],
     )
     learner.train(verbose=verbose)
     paths = learner.find_shortest_paths(learner.build_sparse_graph())
     return learner, paths
 
 
-def compute_pseudotime_outputs(context, paths):
+def compute_pseudotime_outputs(context, paths, seed=42):
     n_cells = len(context["adata"])
     branches = compute_branch_pseudotimes(paths, n_cells)
     global_pt, global_mask, start_cell = compute_graph_distance_global_pseudotime(
@@ -96,8 +94,13 @@ def compute_pseudotime_outputs(context, paths):
         n_cells,
         context["endpoint_result"]["knn_graph"],
     )
-    rf_pt, rf_mask = compute_enhanced_rf_pseudotime_with_global(
-        global_pt, context["model_coords"]
+    rf_pt, rf_mask, rf_mse, rf_r2, rf_validation = (
+        compute_rf_pseudotime_with_validation(
+            global_pt,
+            context["model_coords"],
+            seed=seed,
+            return_details=True,
+        )
     )
     return {
         "branch_results": branches,
@@ -105,6 +108,9 @@ def compute_pseudotime_outputs(context, paths):
         "global_mask": global_mask,
         "rf_pseudotime": rf_pt,
         "rf_mask": rf_mask,
+        "rf_mse": rf_mse,
+        "rf_r2": rf_r2,
+        "rf_validation": rf_validation,
         "start_cell": start_cell,
     }
 
@@ -145,8 +151,13 @@ def run_single_experiment(
             len(context["adata"]),
             context["endpoint_result"]["knn_graph"],
         )
-        rf_pt, rf_mask, rf_mse, rf_r2 = compute_rf_pseudotime_with_validation(
-            global_pt, context["model_coords"], seed=seed
+        rf_pt, rf_mask, rf_mse, rf_r2, rf_validation = (
+            compute_rf_pseudotime_with_validation(
+                global_pt,
+                context["model_coords"],
+                seed=seed,
+                return_details=True,
+            )
         )
         inference_seconds = time.perf_counter() - inference_started
     pipeline_seconds = time.perf_counter() - pipeline_started
@@ -177,6 +188,7 @@ def run_single_experiment(
         start_cell=start_cell,
         cell_types=labels,
         reference_values=reference_values,
+        rf_validation=rf_validation,
         seed=seed,
     )
     metric_started = time.perf_counter()
@@ -209,6 +221,10 @@ def run_single_experiment(
         "global_path_pseudotime": global_pt,
         "QLearning_pseudotime": rf_pt,
     }
+    rf_role = np.full(len(adata), "mapped_non_path", dtype=object)
+    rf_role[np.asarray(rf_validation["train_indices"], dtype=int)] = "train_path"
+    rf_role[np.asarray(rf_validation["test_indices"], dtype=int)] = "test_path"
+    table_data["rf_mapping_role"] = rf_role
     reference_column = dataset_config.get("reference_pseudotime_column")
     if reference_column is not None:
         table_data[reference_column] = np.asarray(adata.obs[reference_column])
@@ -219,6 +235,35 @@ def run_single_experiment(
         )
     table_path = output_dir / f"{dataset_config['key']}_pseudotime.csv"
     pd.DataFrame(table_data).to_csv(table_path, index=False, encoding="utf-8-sig")
+
+    heldout_prediction = {
+        int(index): float(prediction)
+        for index, prediction in zip(
+            rf_validation["test_indices"],
+            rf_validation["test_prediction"],
+        )
+    }
+    split_path = output_dir / f"{dataset_config['key']}_rf_path_cell_split.csv"
+    split_rows = []
+    train_set = set(map(int, rf_validation["train_indices"]))
+    test_set = set(map(int, rf_validation["test_indices"]))
+    for index in map(int, rf_validation["path_indices"]):
+        split_rows.append({
+            "cell_index": index,
+            "cell_id": str(adata.obs_names[index]),
+            "split": "train" if index in train_set else "test",
+            "global_path_pseudotime": float(global_pt[index]),
+            "heldout_test_prediction": heldout_prediction.get(index, np.nan),
+            "heldout_squared_error": (
+                (heldout_prediction[index] - float(global_pt[index])) ** 2
+                if index in test_set else np.nan
+            ),
+            "final_all_cell_mapping": float(rf_pt[index]),
+            "random_seed": int(seed),
+        })
+    pd.DataFrame(split_rows).to_csv(
+        split_path, index=False, encoding="utf-8-sig"
+    )
 
     figures = save_reference_figures(
         adata,
@@ -237,6 +282,23 @@ def run_single_experiment(
         "dataset_config": dataset_config,
         "episodes": int(episodes),
         "seed": int(seed),
+        "rf_validation": {
+            "design": "80% path-cell training / 20% held-out path-cell testing",
+            "validation_scope": "held_out_path_cells",
+            "mapping_scope": "all_cells",
+            "model_refit_after_validation": False,
+            "n_path_cells": int(rf_validation["n_path_cells"]),
+            "n_train_cells": int(rf_validation["n_train_cells"]),
+            "n_test_cells": int(rf_validation["n_test_cells"]),
+            "realized_train_fraction": float(
+                rf_validation["realized_train_fraction"]
+            ),
+            "realized_test_fraction": float(
+                rf_validation["realized_test_fraction"]
+            ),
+            "split_seed": int(rf_validation["split_seed"]),
+            "model_parameters": rf_validation["model_parameters"],
+        },
         "software_versions": software_versions(),
     }
     with figures["report"].open("a", encoding="utf-8") as handle:
@@ -252,6 +314,16 @@ def run_single_experiment(
         "dijkstra_paths": {int(key): [int(value) for value in path] for key, path in paths.items()},
         "Q": {int(state): {int(action): float(value) for action, value in actions.items()}
               for state, actions in learner.Q.items()},
+        "rf_validation": {
+            "split_seed": int(rf_validation["split_seed"]),
+            "path_indices": list(map(int, rf_validation["path_indices"])),
+            "train_indices": list(map(int, rf_validation["train_indices"])),
+            "test_indices": list(map(int, rf_validation["test_indices"])),
+            "test_truth": list(map(float, rf_validation["test_truth"])),
+            "test_prediction": list(map(float, rf_validation["test_prediction"])),
+            "model_parameters": rf_validation["model_parameters"],
+            "model_refit_after_validation": False,
+        },
         "reproducibility": reproducibility,
     }
     with state_path.open("wb") as handle:
@@ -287,6 +359,7 @@ def run_single_experiment(
         "figures": figures["figures"],
         "report": figures["report"],
         "pseudotime_table": table_path,
+        "rf_path_cell_split": split_path,
         "metrics_table": metrics_path,
         "metric_row": metric_row,
         "model_state": state_path,
@@ -328,11 +401,18 @@ def run_repeated_experiments(input_path, output_dir, dataset_config, runs=100, e
             else:
                 branches, global_pt, global_mask, start_cell = {}, None, None, -1
             if global_pt is not None:
-                rf_pt, rf_mask, rf_mse, rf_r2 = compute_rf_pseudotime_with_validation(
-                    global_pt, context["model_coords"], seed=cycle_seed
+                rf_pt, rf_mask, rf_mse, rf_r2, rf_validation = (
+                    compute_rf_pseudotime_with_validation(
+                        global_pt,
+                        context["model_coords"],
+                        seed=cycle_seed,
+                        return_details=True,
+                    )
                 )
             else:
-                rf_pt, rf_mask, rf_mse, rf_r2 = None, None, np.nan, np.nan
+                rf_pt, rf_mask, rf_mse, rf_r2, rf_validation = (
+                    None, None, np.nan, np.nan, None
+                )
         inference_seconds = time.perf_counter() - inference_started
 
         peak_bytes = max(preprocessing_memory.peak_bytes, inference_memory.peak_bytes)
@@ -389,6 +469,7 @@ def run_repeated_experiments(input_path, output_dir, dataset_config, runs=100, e
             start_cell=start_cell,
             cell_types=labels,
             reference_values=reference,
+            rf_validation=rf_validation,
             seed=cycle_seed,
         )
         row.update(extra_metrics)

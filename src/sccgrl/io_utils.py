@@ -49,12 +49,6 @@ def _dense_gene(adata, gene):
     return np.asarray(values).reshape(-1)
 
 
-def _lineage_endpoint_nodes(dijkstra_paths, labels, requested):
-    mapping = {str(labels[int(node)]): int(node) for node in dijkstra_paths}
-    selected = [mapping[str(label)] for label in requested if str(label) in mapping]
-    return selected or [int(node) for node in dijkstra_paths]
-
-
 def _plot_dynamic_heatmap(ax, adata, path_cells, pseudotime, endpoint_name, marker_genes, top_n_genes):
     if len(path_cells) < 3:
         ax.text(0.5, 0.5, f'Path too short: {endpoint_name}', ha='center', va='center', transform=ax.transAxes)
@@ -112,7 +106,6 @@ def plot_comprehensive_configured(
 ):
     """Create the comprehensive figure using values supplied only by dataset_config."""
     labels = np.asarray(adata.obs[dataset_config['label_column']].astype(str))
-    target_lineages = list(dataset_config.get('target_lineages', []))
     target_genes = list(dataset_config.get('target_genes', []))
     target_pairs = [tuple(pair) for pair in dataset_config.get('target_pairs', [])]
     marker_genes = list(dataset_config.get('marker_genes', []))
@@ -133,7 +126,9 @@ def plot_comprehensive_configured(
     palette = sns.color_palette('Set2', len(unique_labels))
     color_map = {label: mpl.colors.to_hex(color) for label, color in zip(unique_labels, palette)}
     color_map.update({str(k): v for k, v in explicit_colors.items()})
-    endpoint_nodes = _lineage_endpoint_nodes(dijkstra_paths, labels, target_lineages)
+    # Use the terminal nodes found by the model. Cell-type labels and configured
+    # lineage names must not select, replace, or reorder endpoints for plotting.
+    endpoint_nodes = [int(node) for node in dijkstra_paths]
     heatmap_nodes = endpoint_nodes[:max(1, int(dataset_config.get('heatmap_count', len(endpoint_nodes))))]
 
     n_gene_rows = max(1, int(np.ceil(max(1, len(target_genes)) / 2)))
@@ -163,9 +158,8 @@ def plot_comprehensive_configured(
     ax_b.scatter(plot_coords[start, 0], plot_coords[start, 1], marker='*', s=220,
                  facecolor='white', edgecolor='black', zorder=10)
     for node in endpoint_nodes:
-        name = str(labels[node])
         ax_b.scatter(plot_coords[node, 0], plot_coords[node, 1], marker='X', s=100,
-                     color=color_map.get(name, 'red'), edgecolor='white', zorder=10)
+                     color='red', edgecolor='white', zorder=10)
     ax_b.set_title('scCGRL trajectories')
 
     pt_scatter = ax_c.scatter(plot_coords[:, 0], plot_coords[:, 1], c=final_pt,
@@ -177,9 +171,8 @@ def plot_comprehensive_configured(
     ax_c.set_title('Inferred pseudotime')
 
     _, path_steps = q_learner.calculate_path_rewards(dijkstra_paths)
-    for node, rewards in path_steps.items():
-        name = str(labels[int(node)])
-        ax_d.plot(rewards, lw=1.7, label=name, color=color_map.get(name))
+    for endpoint_number, (_, rewards) in enumerate(path_steps.items(), start=1):
+        ax_d.plot(rewards, lw=1.7, label=f'Endpoint {endpoint_number}')
     ax_d.axhline(0, color='red', ls='--', lw=1)
     ax_d.legend(frameon=False, fontsize=8)
     ax_d.set(title='Reward profiles', xlabel='Step', ylabel='Reward')
@@ -217,23 +210,17 @@ def plot_comprehensive_configured(
     for index in range(max(1, len(target_pairs))):
         row, col = pair_start_row + index // 2, index % 2
         pair_axes.append(fig.add_subplot(left[row, col]))
-    type_to_node = {str(labels[int(node)]): int(node) for node in dijkstra_paths}
     if target_pairs:
-        for (gene, lineage), ax in zip(target_pairs, pair_axes):
-            lineage = str(lineage)
-            if gene not in adata.var_names or lineage not in type_to_node:
-                ax.text(0.5, 0.5, f'Missing {gene} or {lineage}', ha='center', va='center', transform=ax.transAxes)
+        for (gene, _), ax in zip(target_pairs, pair_axes):
+            if gene not in adata.var_names:
+                ax.text(0.5, 0.5, f'Missing gene: {gene}', ha='center', va='center', transform=ax.transAxes)
                 ax.axis('off')
                 continue
             expression = _dense_gene(adata, gene)
             order = np.argsort(expression)
             scatter = ax.scatter(plot_coords[order, 0], plot_coords[order, 1], c=expression[order],
                                  cmap='plasma', s=9, edgecolors='none')
-            node = type_to_node[lineage]
-            path = dijkstra_paths[node]
-            for segment in extract_and_smooth_tree({node: path}, plot_coords, smooth=True)[0]:
-                ax.plot(segment[:, 0], segment[:, 1], color=color_map.get(lineage, 'black'), lw=2.5)
-            ax.set_title(f'{gene} → {lineage}')
+            ax.set_title(str(gene))
             ax.axis('off')
             fig.colorbar(scatter, ax=ax, orientation='horizontal', fraction=0.04, pad=0.02)
     elif reference_pt is not None:
@@ -253,9 +240,10 @@ def plot_comprehensive_configured(
         pair_axes[0].axis('off')
 
     heatmap_axes = [fig.add_subplot(right[index, 0]) for index in range(max(1, len(heatmap_nodes)))]
-    for node, ax in zip(heatmap_nodes, heatmap_axes):
+    for endpoint_number, (node, ax) in enumerate(zip(heatmap_nodes, heatmap_axes), start=1):
         image = _plot_dynamic_heatmap(
-            ax, adata, dijkstra_paths[node], final_pt, str(labels[node]), marker_genes, top_n_genes
+            ax, adata, dijkstra_paths[node], final_pt,
+            f'Endpoint {endpoint_number}', marker_genes, top_n_genes
         )
         if image is not None:
             fig.colorbar(image, ax=ax, orientation='horizontal', fraction=0.025, pad=0.04)
@@ -520,9 +508,6 @@ def plot_spatial_rewards_with_celltypes(q_learner, paths, coords, cell_types):
         steps = path_steps[end]
         path_coords = coords[path]
 
-        # Get cell type of current endpoint
-        end_type_name = cell_types[end]
-
         # --- Step A: UMAP global gray background ---
         ax.scatter(coords[:, 0], coords[:, 1], c='#e0e0e0', alpha=0.3, s=15, edgecolors='none')
 
@@ -554,8 +539,8 @@ def plot_spatial_rewards_with_celltypes(q_learner, paths, coords, cell_types):
                     zorder=10, ha='center', va='bottom',
                     path_effects=[pe.withStroke(linewidth=2.5, foreground="white")])
 
-        # Add cell type to title
-        ax.set_title(f"Target: {end} ({end_type_name})\nSpatial Reward vs Cell Types", fontsize=14, pad=10)
+        # Do not append the endpoint cell type to the target title.
+        ax.set_title(f"Target node: {end}\nSpatial Reward vs Cell Types", fontsize=14, pad=10)
         ax.axis('off')
 
     # Generate global legend in the upper right of the first subplot

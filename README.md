@@ -9,8 +9,10 @@ This repository contains the public reproducibility resources for scCGRL:
 - dataset-specific figure-generating scripts;
 - software-version, data-provenance, licensing, and verification records.
 
-Generated results are intentionally not committed. Every command writes new
-outputs under `results/`, which is excluded from Git.
+Generated run outputs are intentionally not committed. Every command writes new
+outputs under `results/`, which is excluded from Git. The curated benchmark
+workbook used as Supplementary Table S11 is included at
+`benchmark/results/Supplementary_Table_S11.xlsx`.
 
 ## Repository contents
 
@@ -22,6 +24,7 @@ outputs under `results/`, which is excluded from Git.
 | `src/sccgrl/` | Preprocessing, endpoint discovery, Q-learning, trajectory inference, pseudotime mapping, RF propagation, metrics, and I/O. |
 | `run_sccgrl.py` | Main scCGRL command-line entry point. |
 | `benchmark/` | PAGA, DPT, Palantir, Slingshot, Monocle 1/2/3, SLICER, TSCAN, and SCORPIUS runners, shared evaluation, and environments. |
+| `benchmark/results/Supplementary_Table_S11.xlsx` | Mean, SD, median, and 95% CI benchmark statistics for scCGRL and ten comparison methods across five datasets. |
 | `figures/` | Dataset-specific publication-figure scripts. |
 | `reproducibility/data/` | Data preparation, exact verification, provenance, and checksums. |
 | `docs/` | Dataset, benchmark, software-version, and reproduction documentation. |
@@ -84,6 +87,19 @@ Both commands write to `results/human_myeloid/seed42/` and record pseudotime,
 metrics, resource measurements, processed AnnData, model state, figures, run
 parameters, software versions, and the Git commit.
 
+For Random Forest propagation, trajectory/path cells are split reproducibly
+into 80% training cells and 20% held-out testing cells using the run seed. MSE
+and R2 are calculated only on the held-out path cells. The same model fitted on
+the 80% training subset is then applied to all cells without refitting on the
+test subset. Each single-run directory records the exact split in
+`<dataset>_rf_path_cell_split.csv`; `<dataset>_pseudotime.csv` identifies every
+cell as `train_path`, `test_path`, or `mapped_non_path`.
+
+Q-learning receives the graph, coordinates, model-selected start node, and
+model-selected endpoint indices. Cell-type labels are not passed into the
+Q-learning object, and its diagnostic plots identify endpoints only by node
+index; biological endpoint types are evaluated after inference.
+
 ## Run the ten comparison methods
 
 Create the Python baseline environment:
@@ -107,6 +123,10 @@ The benchmark does not supply terminal identity, terminal count, true branch
 count, or reference pseudotime to inference. Unsupported branch/topology
 metrics remain `NaN`; failures are recorded and do not terminate later runs.
 Outputs are generated under `results/benchmark/`.
+
+The benchmark statistics reported in the manuscript are also provided as the
+tracked workbook `benchmark/results/Supplementary_Table_S11.xlsx`, with separate
+worksheets for mean, SD, median, and 95% confidence intervals.
 
 ## Generate publication figures
 

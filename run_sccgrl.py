@@ -262,6 +262,13 @@ def write_run_manifest(
         "episodes": int(episodes),
         "runs": int(runs),
         "evaluation_metric_version": "v2.0",
+        "rf_mapping_validation": {
+            "train_fraction": 0.80,
+            "test_fraction": 0.20,
+            "validation_scope": "held_out_path_cells",
+            "mapping_scope": "all_cells",
+            "model_refit_after_validation": False,
+        },
         "provenance_conflicts": {
             "human_bone_marrow_notebook_display_seed": 81 if dataset == "human_bone_marrow" else None,
             "selected_cli_seed": int(seed),

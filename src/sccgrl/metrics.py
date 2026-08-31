@@ -203,17 +203,76 @@ def _ordering_metrics(predicted, reference):
     }
 
 
-def compute_rf_pseudotime_with_validation(global_pt, coordinates, seed=42):
-    """Extend path pseudotime; MSE/R2 use held-out path cells only."""
+RF_TEST_FRACTION = 0.20
+RF_TRAIN_FRACTION = 1.0 - RF_TEST_FRACTION
+
+
+def compute_rf_pseudotime_with_validation(
+    global_pt,
+    coordinates,
+    seed=42,
+    test_size=RF_TEST_FRACTION,
+    return_details=False,
+):
+    """Validate on held-out path cells, then map pseudotime to all cells.
+
+    Path cells with finite nonnegative global pseudotime are split once into
+    80% training and 20% held-out testing cells using ``seed``.  The held-out
+    cells are never used to fit the model. MSE and R2 are computed only on
+    those testing cells, after which the same model trained on the 80% subset
+    predicts pseudotime for every cell. The model is not refitted on the test
+    cells before the all-cell mapping step.
+
+    Set ``return_details=True`` to obtain the exact path/train/test indices,
+    held-out predictions, realized fractions, and RF parameters for auditing.
+    """
     global_pt = np.asarray(global_pt, dtype=float)
-    coordinates = np.asarray(coordinates)
-    train_mask = np.isfinite(global_pt) & (global_pt >= 0)
-    if train_mask.sum() < 20:
-        return global_pt, train_mask, np.nan, np.nan
-    train_indices = np.where(train_mask)[0]
-    X_train, y_train = coordinates[train_mask], global_pt[train_mask]
-    X_sub, X_test, y_sub, y_test = train_test_split(
-        X_train, y_train, test_size=0.2, random_state=int(seed)
+    coordinates = np.asarray(coordinates, dtype=float)
+    if coordinates.ndim != 2:
+        raise ValueError("coordinates must be a two-dimensional array")
+    if coordinates.shape[0] != global_pt.shape[0]:
+        raise ValueError("global_pt and coordinates must contain the same cells")
+    if not 0.0 < float(test_size) < 1.0:
+        raise ValueError("test_size must lie strictly between 0 and 1")
+
+    path_mask = np.isfinite(global_pt) & (global_pt >= 0)
+    path_indices = np.flatnonzero(path_mask)
+    details = {
+        "status": "insufficient_path_cells",
+        "split_seed": int(seed),
+        "requested_train_fraction": float(1.0 - float(test_size)),
+        "requested_test_fraction": float(test_size),
+        "path_indices": path_indices,
+        "train_indices": np.asarray([], dtype=int),
+        "test_indices": np.asarray([], dtype=int),
+        "test_truth": np.asarray([], dtype=float),
+        "test_prediction": np.asarray([], dtype=float),
+        "n_path_cells": int(path_indices.size),
+        "n_train_cells": 0,
+        "n_test_cells": 0,
+        "realized_train_fraction": np.nan,
+        "realized_test_fraction": np.nan,
+        "validation_scope": "held_out_path_cells",
+        "mapping_training_scope": "training_path_cells_only",
+        "model_refit_after_validation": False,
+        "model_parameters": {
+            "n_estimators": 200,
+            "max_depth": 20,
+            "min_samples_split": 5,
+            "min_samples_leaf": 1,
+            "random_state": int(seed),
+            "n_jobs": -1,
+        },
+    }
+    if path_indices.size < 20:
+        result = (global_pt, path_mask, np.nan, np.nan)
+        return (*result, details) if return_details else result
+
+    train_indices, test_indices = train_test_split(
+        path_indices,
+        test_size=float(test_size),
+        random_state=int(seed),
+        shuffle=True,
     )
     model = RandomForestRegressor(
         n_estimators=200,
@@ -223,14 +282,27 @@ def compute_rf_pseudotime_with_validation(global_pt, coordinates, seed=42):
         random_state=int(seed),
         n_jobs=-1,
     )
-    model.fit(X_sub, y_sub)
-    prediction = model.predict(X_test)
-    mse = float(np.mean((prediction - y_test) ** 2))
-    r2 = float(model.score(X_test, y_test))
+    model.fit(coordinates[train_indices], global_pt[train_indices])
+    test_prediction = model.predict(coordinates[test_indices])
+    test_truth = global_pt[test_indices]
+    mse = float(np.mean((test_prediction - test_truth) ** 2))
+    r2 = float(model.score(coordinates[test_indices], test_truth))
     rf_pt = np.clip(model.predict(coordinates), 0.0, 1.0001)
-    start_cell = int(train_indices[np.argmin(y_train)])
+    start_cell = int(path_indices[np.argmin(global_pt[path_indices])])
     rf_pt[start_cell] = 0.0
-    return rf_pt, np.ones(len(coordinates), dtype=bool), mse, r2
+    details.update({
+        "status": "ok",
+        "train_indices": np.asarray(train_indices, dtype=int),
+        "test_indices": np.asarray(test_indices, dtype=int),
+        "test_truth": np.asarray(test_truth, dtype=float),
+        "test_prediction": np.asarray(test_prediction, dtype=float),
+        "n_train_cells": int(len(train_indices)),
+        "n_test_cells": int(len(test_indices)),
+        "realized_train_fraction": float(len(train_indices) / len(path_indices)),
+        "realized_test_fraction": float(len(test_indices) / len(path_indices)),
+    })
+    result = (rf_pt, np.ones(len(coordinates), dtype=bool), mse, r2)
+    return (*result, details) if return_details else result
 
 
 def serialize_path(path):
@@ -250,6 +322,7 @@ def build_repeated_result_row(
     start_cell,
     cell_types,
     reference_values,
+    rf_validation=None,
     seed=42,
 ):
     row = {
@@ -261,6 +334,30 @@ def build_repeated_result_row(
         "rf_r2": float(rf_r2),
         "start_cell": int(start_cell),
     }
+    if rf_validation is not None:
+        row.update({
+            "rf_path_cells": int(rf_validation.get("n_path_cells", 0)),
+            "rf_train_cells": int(rf_validation.get("n_train_cells", 0)),
+            "rf_test_cells": int(rf_validation.get("n_test_cells", 0)),
+            "rf_train_fraction": float(
+                rf_validation.get("realized_train_fraction", np.nan)
+            ),
+            "rf_test_fraction": float(
+                rf_validation.get("realized_test_fraction", np.nan)
+            ),
+            "rf_split_seed": int(rf_validation.get("split_seed", seed)),
+            "rf_validation_scope": str(
+                rf_validation.get("validation_scope", "held_out_path_cells")
+            ),
+            "rf_mapping_training_scope": str(
+                rf_validation.get(
+                    "mapping_training_scope", "training_path_cells_only"
+                )
+            ),
+            "rf_model_refit_after_validation": bool(
+                rf_validation.get("model_refit_after_validation", False)
+            ),
+        })
     for index, (_, path) in enumerate(dijkstra_paths.items(), start=1):
         row[f"path_{index}"] = serialize_path(path)
     for index, branch in enumerate(branch_results.values(), start=1):
@@ -293,7 +390,11 @@ def ordered_result_columns(max_paths):
     columns = [
         "run", "random_seed", "K", "evaluation_mode",
         "reference_trajectory_source", "n_paths", "traj_cells",
-        "rf_mse", "rf_r2", "start_cell",
+        "rf_mse", "rf_r2", "rf_path_cells", "rf_train_cells",
+        "rf_test_cells", "rf_train_fraction", "rf_test_fraction",
+        "rf_split_seed", "rf_validation_scope",
+        "rf_mapping_training_scope", "rf_model_refit_after_validation",
+        "start_cell",
         "preprocessing_runtime_seconds", "inference_runtime_seconds",
         "pipeline_runtime_seconds", "trajectory_metrics_runtime_seconds",
         "pipeline_peak_rss_mb", "pipeline_memory_increase_mb",
